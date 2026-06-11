@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bumblebees Event Planner</title>
+<style>
+  :root {
+    --accent: #1a1a1a;          /* bee black */
+    --honey: #f5b800;           /* bumblebee yellow */
+    --honey-dark: #c79200;
+    --accent-light: #fdf3d7;    /* light honey */
+    --border: #d8c9a3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    margin: 0;
+    background: #faf6ec;
+    color: #222;
+  }
+
+  /* ---------- Editor (screen only) ---------- */
+  .editor {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+  .editor h1 {
+    color: var(--accent);
+    font-size: 1.5rem;
+    padding-bottom: 8px;
+    border-bottom: 4px solid var(--honey);
+    display: inline-block;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .panel h2 {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+    color: var(--accent);
+    padding-left: 8px;
+    border-left: 5px solid var(--honey);
+  }
+  label { display: block; font-size: .85rem; margin: 10px 0 3px; font-weight: 600; }
+  input[type=text], input[type=date], input[type=time], textarea, select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: .95rem;
+    font-family: inherit;
+  }
+  .row2 { display: flex; gap: 12px; }
+  .row2 > div { flex: 1; }
+
+  .item-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .item-row input.item-name { flex: 3; }
+  .item-row input.item-count {
+    flex: 0 0 70px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: .95rem;
+  }
+  .item-row button {
+    flex: 0 0 auto;
+    background: #fbe9e7;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: .9rem;
+  }
+  .category-block {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+    background: #fffdf5;
+  }
+  .category-head {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .category-head input { font-weight: 600; }
+  .category-head button {
+    background: #fbe9e7; border: none; border-radius: 6px;
+    padding: 8px 10px; cursor: pointer;
+  }
+  .btn {
+    background: var(--honey);
+    color: var(--accent);
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: .95rem;
+    cursor: pointer;
+  }
+  .btn.secondary { background: var(--accent-light); color: var(--accent); font-weight: 400; }
+  .btn:hover { opacity: .9; }
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #faf6ec;
+    padding: 10px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .lang-switch {
+    margin-left: auto;
+    display: flex;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .lang-switch button {
+    border: none;
+    background: #fff;
+    color: var(--accent);
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .9rem;
+  }
+  .lang-switch button.active {
+    background: var(--honey);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .hint { font-size: .8rem; color: #666; margin-top: 4px; }
+
+  /* ---------- Print sheet preview ---------- */
+  .sheet {
+    background: #fff;
+    width: 210mm;
+    min-height: 280mm;
+    margin: 20px auto;
+    padding: 15mm 18mm;
+    box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  }
+  .sheet .kita-name {
+    text-align: center;
+    font-size: 11pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a07800;
+    margin-bottom: 1mm;
+  }
+  .sheet h1 {
+    text-align: center;
+    font-size: 26pt;
+    margin: 0 0 2mm;
+    color: #000;
+  }
+  .sheet .bee-stripes {
+    height: 3.5mm;
+    margin: 0 auto 4mm;
+    width: 60%;
+    border-radius: 2mm;
+    background: repeating-linear-gradient(45deg,
+      #f5b800 0 6mm, #1a1a1a 6mm 12mm);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sheet .meta {
+    text-align: center;
+    font-size: 13pt;
+    margin-bottom: 4mm;
+  }
+  .sheet .intro {
+    font-size: 11pt;
+    margin-bottom: 6mm;
+    white-space: pre-wrap;
+  }
+  .sheet h2.cat {
+    font-size: 14pt;
+    margin: 7mm 0 2mm;
+    padding: 1.5mm 3mm;
+    background: #fdf3d7;
+    border-left: 4px solid #f5b800;
+    page-break-after: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  table.signup {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11pt;
+  }
+  table.signup th, table.signup td {
+    border: 1px solid #444;
+    padding: 2.2mm 3mm;
+    text-align: left;
+    vertical-align: bottom;
+  }
+  table.signup th {
+    background: #f2f2f2;
+    font-size: 10pt;
+  }
+  table.signup td.namecol { height: 9mm; }
+  table.signup tr { page-break-inside: avoid; }
+  .sheet .footer {
+    margin-top: 8mm;
+    font-size: 10pt;
+    color: #333;
+    text-align: center;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .editor, .toolbar { display: none !important; }
+    .sheet {
+      box-shadow: none;
+      margin: 0;
+      width: auto;
+      min-height: 0;
+      padding: 0;
+    }
+    @page { size: A4 portrait; margin: 14mm; }
+  }
+  @media (max-width: 820px) {
+    .sheet { width: 100%; min-height: 0; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="editor">
+  <h1 id="uiTitle"></h1>
+  <p class="hint" id="uiHint"></p>
+
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()" id="uiPrint"></button>
+    <button class="btn secondary" onclick="saveList()" id="uiSave"></button>
+    <button class="btn secondary" onclick="document.getElementById('loadFile').click()" id="uiLoad"></button>
+    <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadList(this)">
+    <select id="template" onchange="applyTemplate(this.value)" style="max-width:220px"></select>
+    <div class="lang-switch">
+      <button id="langDe" onclick="setLang('de')">Deutsch</button>
+      <button id="langEn" onclick="setLang('en')">English</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 id="uiEventHead"></h2>
+    <label id="uiLblTitle"></label>
+    <input type="text" id="evTitle" oninput="render()">
+    <div class="row2">
+      <div>
+        <label id="uiLblDate"></label>
+        <input type="date" id="evDate" oninput="render()">
+      </div>
+      <div>
+        <label id="uiLblTime"></label>
+        <input type="text" id="evTime" oninput="render()">
+      </div>
+    </div>
+    <label id="uiLblIntro"></label>
+    <textarea id="evIntro" rows="3" oninput="render()"></textarea>
+    <label id="uiLblFooter"></label>
+    <input type="text" id="evFooter" oninput="render()">
+  </div>
+
+  <div class="panel">
+    <h2 id="uiItemsHead"></h2>
+    <p class="hint" id="uiItemsHint"></p>
+    <div id="categories"></div>
+    <button class="btn secondary" onclick="addCategory()" id="uiAddCat"></button>
+  </div>
+</div>
+
+<!-- Print sheet -->
+<div class="sheet" id="sheet"></div>
+
+<script>
+let lang = localStorage.getItem('kitaListLang') || 'de';
+let data = { categories: [] };
+
+const I18N = {
+  de: {
+    uiTitle: "🐝 Bumblebees Plan-Bienchen",
+    uiHint: "Liste ausfüllen, unten Vorschau prüfen, dann „Drucken“ klicken – fertig zum Aufhängen (A4). Mit „Speichern“ kannst du die Liste als Datei sichern und später wieder laden.",
+    uiPrint: "🖨️ Drucken", uiSave: "💾 Speichern", uiLoad: "📂 Laden",
+    uiEventHead: "Veranstaltung",
+    uiLblTitle: "Titel", uiLblDate: "Datum", uiLblTime: "Uhrzeit (optional)",
+    uiLblIntro: "Einleitungstext (optional)", uiLblFooter: "Fußzeile (optional)",
+    phTitle: "z. B. Sommerfest 2026", phTime: "z. B. 15:00 – 18:00 Uhr",
+    phIntro: "Liebe Eltern, für unser Fest brauchen wir eure Unterstützung! Bitte tragt euch ein. Vielen Dank! 💚",
+    phFooter: "z. B. Bitte bis zum 20.06. eintragen. Fragen an das Eltern-Team.",
+    uiItemsHead: "Kategorien & Positionen",
+    uiItemsHint: "Pro Position entsteht eine Zeile mit Schreiblinie für den Namen. „Anzahl“ = wie viele Personen sich für diese Position eintragen können (jede bekommt eine eigene Zeile).",
+    uiAddCat: "＋ Kategorie hinzufügen", uiAddItem: "＋ Position",
+    phCategory: "Kategorie, z. B. Essen", phItem: "Position, z. B. Kuchen",
+    delCat: "Kategorie löschen", delItem: "Position löschen", countTitle: "Anzahl Zeilen",
+    tplChoose: "Vorlage wählen…",
+    tplNames: { sommerfest: "Sommerfest", winterfest: "Winterfest", flohmarkt: "Flohmarkt", leer: "Leere Liste" },
+    thWhat: "Was / Aufgabe", thName: "Name",
+    days: ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],
+    dateLocale: "de-DE",
+    loadError: "Datei konnte nicht gelesen werden.",
+    fileFallback: "liste"
+  },
+  en: {
+    uiTitle: "🐝 Bumblebees – Bee Organized!",
+    uiHint: "Fill in the list, check the preview below, then click “Print” – ready to hang up (A4). Use “Save” to store the list as a file and load it again later.",
+    uiPrint: "🖨️ Print", uiSave: "💾 Save", uiLoad: "📂 Load",
+    uiEventHead: "Event",
+    uiLblTitle: "Title", uiLblDate: "Date", uiLblTime: "Time (optional)",
+    uiLblIntro: "Intro text (optional)", uiLblFooter: "Footer (optional)",
+    phTitle: "e.g. Summer Party 2026", phTime: "e.g. 3:00 – 6:00 pm",
+    phIntro: "Dear parents, we need your support for our party! Please sign up. Thank you! 💚",
+    phFooter: "e.g. Please sign up by June 20. Questions? Ask the parents' team.",
+    uiItemsHead: "Categories & Items",
+    uiItemsHint: "Each item gets a row with a line for a name. “Count” = how many people can sign up for this item (each gets their own row).",
+    uiAddCat: "＋ Add category", uiAddItem: "＋ Add item",
+    phCategory: "Category, e.g. Food", phItem: "Item, e.g. Cake",
+    delCat: "Delete category", delItem: "Delete item", countTitle: "Number of rows",
+    tplChoose: "Choose a template…",
+    tplNames: { sommerfest: "Summer party", winterfest: "Winter party", flohmarkt: "Flea market", leer: "Empty list" },
+    thWhat: "What / Task", thName: "Name",
+    days: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+    dateLocale: "en-GB",
+    loadError: "Could not read the file.",
+    fileFallback: "list"
+  }
+};
+
+const TEMPLATES = {
+  de: {
+    leer: { categories: [ { name: "", items: [{ name: "", count: 1 }] } ] },
+    sommerfest: {
+      title: "Sommerfest", intro: "Liebe Eltern,\nfür unser Sommerfest brauchen wir eure Unterstützung! Bitte tragt euch mit Namen ein. Vielen Dank! ☀️",
+      categories: [
+        { name: "Essen", items: [
+          { name: "Kuchen", count: 4 }, { name: "Muffins", count: 2 },
+          { name: "Obstteller", count: 2 }, { name: "Gemüsesticks mit Dip", count: 2 },
+          { name: "Salat", count: 3 }, { name: "Würstchen (Paket)", count: 2 } ] },
+        { name: "Getränke", items: [
+          { name: "Wasser (6er-Pack)", count: 2 }, { name: "Apfelschorle", count: 2 },
+          { name: "Kaffee (Thermoskanne)", count: 2 } ] },
+        { name: "Helfer & Material", items: [
+          { name: "Aufbau (ab 13:00 Uhr)", count: 3 }, { name: "Abbau / Aufräumen", count: 3 },
+          { name: "Grillen", count: 2 }, { name: "Pappteller & Servietten", count: 1 },
+          { name: "Becher", count: 1 } ] }
+      ]
+    },
+    winterfest: {
+      title: "Winterfest", intro: "Liebe Eltern,\nfür unser Winterfest brauchen wir eure Unterstützung! Bitte tragt euch mit Namen ein. Vielen Dank! ⛄",
+      categories: [
+        { name: "Essen", items: [
+          { name: "Plätzchen", count: 3 }, { name: "Kuchen", count: 3 },
+          { name: "Brezeln", count: 2 }, { name: "Obstteller", count: 2 } ] },
+        { name: "Getränke", items: [
+          { name: "Kinderpunsch (Thermoskanne)", count: 3 }, { name: "Kaffee (Thermoskanne)", count: 2 },
+          { name: "Wasser (6er-Pack)", count: 2 } ] },
+        { name: "Helfer & Material", items: [
+          { name: "Aufbau", count: 3 }, { name: "Abbau / Aufräumen", count: 3 },
+          { name: "Becher & Servietten", count: 1 }, { name: "Lichterketten", count: 1 } ] }
+      ]
+    },
+    flohmarkt: {
+      title: "Flohmarkt", intro: "Liebe Eltern,\nfür unseren Flohmarkt brauchen wir eure Unterstützung! Bitte tragt euch mit Namen ein. Vielen Dank!",
+      categories: [
+        { name: "Helfer", items: [
+          { name: "Aufbau Tische (ab 8:00 Uhr)", count: 4 }, { name: "Standbetreuung Vormittag", count: 3 },
+          { name: "Standbetreuung Nachmittag", count: 3 }, { name: "Abbau / Aufräumen", count: 4 },
+          { name: "Kasse Kuchenstand", count: 2 } ] },
+        { name: "Kuchenstand", items: [
+          { name: "Kuchen", count: 4 }, { name: "Muffins", count: 2 },
+          { name: "Kaffee (Thermoskanne)", count: 2 }, { name: "Wasser (6er-Pack)", count: 2 } ] }
+      ]
+    }
+  },
+  en: {
+    leer: { categories: [ { name: "", items: [{ name: "", count: 1 }] } ] },
+    sommerfest: {
+      title: "Summer Party", intro: "Dear parents,\nwe need your support for our summer party! Please sign up with your name. Thank you! ☀️",
+      categories: [
+        { name: "Food", items: [
+          { name: "Cake", count: 4 }, { name: "Muffins", count: 2 },
+          { name: "Fruit platter", count: 2 }, { name: "Veggie sticks with dip", count: 2 },
+          { name: "Salad", count: 3 }, { name: "Sausages (pack)", count: 2 } ] },
+        { name: "Drinks", items: [
+          { name: "Water (6-pack)", count: 2 }, { name: "Apple spritzer", count: 2 },
+          { name: "Coffee (thermos)", count: 2 } ] },
+        { name: "Helpers & Supplies", items: [
+          { name: "Setup (from 1:00 pm)", count: 3 }, { name: "Teardown / cleanup", count: 3 },
+          { name: "BBQ duty", count: 2 }, { name: "Paper plates & napkins", count: 1 },
+          { name: "Cups", count: 1 } ] }
+      ]
+    },
+    winterfest: {
+      title: "Winter Party", intro: "Dear parents,\nwe need your support for our winter party! Please sign up with your name. Thank you! ⛄",
+      categories: [
+        { name: "Food", items: [
+          { name: "Cookies", count: 3 }, { name: "Cake", count: 3 },
+          { name: "Pretzels", count: 2 }, { name: "Fruit platter", count: 2 } ] },
+        { name: "Drinks", items: [
+          { name: "Kids' punch (thermos)", count: 3 }, { name: "Coffee (thermos)", count: 2 },
+          { name: "Water (6-pack)", count: 2 } ] },
+        { name: "Helpers & Supplies", items: [
+          { name: "Setup", count: 3 }, { name: "Teardown / cleanup", count: 3 },
+          { name: "Cups & napkins", count: 1 }, { name: "Fairy lights", count: 1 } ] }
+      ]
+    },
+    flohmarkt: {
+      title: "Flea Market", intro: "Dear parents,\nwe need your support for our flea market! Please sign up with your name. Thank you!",
+      categories: [
+        { name: "Helpers", items: [
+          { name: "Table setup (from 8:00 am)", count: 4 }, { name: "Stall duty morning", count: 3 },
+          { name: "Stall duty afternoon", count: 3 }, { name: "Teardown / cleanup", count: 4 },
+          { name: "Cake stand cashier", count: 2 } ] },
+        { name: "Cake stand", items: [
+          { name: "Cake", count: 4 }, { name: "Muffins", count: 2 },
+          { name: "Coffee (thermos)", count: 2 }, { name: "Water (6-pack)", count: 2 } ] }
+      ]
+    }
+  }
+};
+
+function t(key) { return I18N[lang][key]; }
+
+// Build a lookup of every known template string in `from` mapped to its
+// counterpart in `to` (templates are structurally identical across languages).
+function buildTranslationMap(from, to) {
+  const map = new Map();
+  for (const key of Object.keys(TEMPLATES[from])) {
+    const a = TEMPLATES[from][key], b = TEMPLATES[to][key];
+    if (a.title) map.set(a.title, b.title);
+    if (a.intro) map.set(a.intro, b.intro);
+    a.categories.forEach((cat, ci) => {
+      if (cat.name) map.set(cat.name, b.categories[ci].name);
+      cat.items.forEach((it, ii) => {
+        if (it.name) map.set(it.name, b.categories[ci].items[ii].name);
+      });
+    });
+  }
+  return map;
+}
+
+function setLang(l) {
+  if (l !== lang) {
+    const map = buildTranslationMap(lang, l);
+    const tr = s => map.get(s) || s;
+    for (const id of ['evTitle', 'evIntro']) {
+      const el = document.getElementById(id);
+      el.value = tr(el.value);
+    }
+    for (const cat of data.categories) {
+      cat.name = tr(cat.name);
+      for (const it of cat.items) it.name = tr(it.name);
+    }
+  }
+  lang = l;
+  localStorage.setItem('kitaListLang', l);
+  document.documentElement.lang = l;
+  applyLang();
+  renderEditor();
+  render();
+}
+
+function applyLang() {
+  const ids = ["uiTitle","uiHint","uiPrint","uiSave","uiLoad","uiEventHead","uiLblTitle",
+    "uiLblDate","uiLblTime","uiLblIntro","uiLblFooter","uiItemsHead","uiItemsHint","uiAddCat"];
+  for (const id of ids) document.getElementById(id).textContent = t(id);
+  document.getElementById('evTitle').placeholder = t('phTitle');
+  document.getElementById('evTime').placeholder = t('phTime');
+  document.getElementById('evIntro').placeholder = t('phIntro');
+  document.getElementById('evFooter').placeholder = t('phFooter');
+  document.getElementById('langDe').classList.toggle('active', lang === 'de');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  const sel = document.getElementById('template');
+  const prev = sel.value;
+  sel.innerHTML = `<option value="">${esc(t('tplChoose'))}</option>` +
+    Object.keys(t('tplNames')).map(k => `<option value="${k}">${esc(t('tplNames')[k])}</option>`).join('');
+  sel.value = prev;
+}
+
+function applyTemplate(key) {
+  if (!key) return;
+  const tpl = TEMPLATES[lang][key];
+  document.getElementById('evTitle').value = tpl.title || "";
+  document.getElementById('evIntro').value = tpl.intro || "";
+  data.categories = JSON.parse(JSON.stringify(tpl.categories));
+  renderEditor(); render();
+}
+
+function addCategory() {
+  data.categories.push({ name: "", items: [{ name: "", count: 1 }] });
+  renderEditor(); render();
+}
+function removeCategory(ci) { data.categories.splice(ci, 1); renderEditor(); render(); }
+function addItem(ci) { data.categories[ci].items.push({ name: "", count: 1 }); renderEditor(); render(); }
+function removeItem(ci, ii) { data.categories[ci].items.splice(ii, 1); renderEditor(); render(); }
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function renderEditor() {
+  const root = document.getElementById('categories');
+  root.innerHTML = data.categories.map((cat, ci) => `
+    <div class="category-block">
+      <div class="category-head">
+        <input type="text" value="${esc(cat.name)}" placeholder="${esc(t('phCategory'))}"
+          oninput="data.categories[${ci}].name=this.value; render()">
+        <button title="${esc(t('delCat'))}" onclick="removeCategory(${ci})">🗑️</button>
+      </div>
+      ${cat.items.map((it, ii) => `
+        <div class="item-row">
+          <input class="item-name" type="text" value="${esc(it.name)}" placeholder="${esc(t('phItem'))}"
+            oninput="data.categories[${ci}].items[${ii}].name=this.value; render()">
+          <input class="item-count" type="number" min="1" max="30" value="${it.count}" title="${esc(t('countTitle'))}"
+            oninput="data.categories[${ci}].items[${ii}].count=Math.max(1,parseInt(this.value)||1); render()">
+          <button title="${esc(t('delItem'))}" onclick="removeItem(${ci},${ii})">✕</button>
+        </div>`).join('')}
+      <button class="btn secondary" onclick="addItem(${ci})">${esc(t('uiAddItem'))}</button>
+    </div>`).join('');
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  return t('days')[d.getDay()] + ", " + d.toLocaleDateString(t('dateLocale'), { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function render() {
+  const title = document.getElementById('evTitle').value;
+  const date = formatDate(document.getElementById('evDate').value);
+  const time = document.getElementById('evTime').value;
+  const intro = document.getElementById('evIntro').value;
+  const footer = document.getElementById('evFooter').value;
+
+  let html = `<div class="kita-name">🐝 Kita Bumblebees 🐝</div>`;
+  html += `<h1>${esc(title) || "&nbsp;"}</h1>`;
+  html += `<div class="bee-stripes"></div>`;
+  const meta = [date, time].filter(Boolean).join(" &nbsp;·&nbsp; ");
+  if (meta) html += `<div class="meta">📅 ${meta}</div>`;
+  if (intro) html += `<div class="intro">${esc(intro)}</div>`;
+
+  for (const cat of data.categories) {
+    const items = cat.items.filter(it => it.name.trim());
+    if (!items.length && !cat.name.trim()) continue;
+    if (cat.name.trim()) html += `<h2 class="cat">${esc(cat.name)}</h2>`;
+    html += `<table class="signup"><tr><th style="width:45%">${esc(t('thWhat'))}</th><th>${esc(t('thName'))}</th></tr>`;
+    for (const it of items) {
+      for (let i = 0; i < it.count; i++) {
+        html += `<tr><td>${esc(it.name)}${it.count > 1 ? ` <span style="color:#777;font-size:9pt">(${i+1}/${it.count})</span>` : ""}</td><td class="namecol"></td></tr>`;
+      }
+    }
+    html += `</table>`;
+  }
+  if (footer) html += `<div class="footer">${esc(footer)}</div>`;
+  document.getElementById('sheet').innerHTML = html;
+}
+
+function saveList() {
+  const obj = {
+    title: document.getElementById('evTitle').value,
+    date: document.getElementById('evDate').value,
+    time: document.getElementById('evTime').value,
+    intro: document.getElementById('evIntro').value,
+    footer: document.getElementById('evFooter').value,
+    categories: data.categories
+  };
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (obj.title || t('fileFallback')).replace(/[^\wäöüÄÖÜß -]/g, "") + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function loadList(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      document.getElementById('evTitle').value = obj.title || "";
+      document.getElementById('evDate').value = obj.date || "";
+      document.getElementById('evTime').value = obj.time || "";
+      document.getElementById('evIntro').value = obj.intro || "";
+      document.getElementById('evFooter').value = obj.footer || "";
+      data.categories = obj.categories || [];
+      renderEditor(); render();
+    } catch { alert(t('loadError')); }
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
+// Initial setup: apply saved language and start with the summer party template
+applyLang();
+applyTemplate('sommerfest');
+</script>
+</body>
+</html>
