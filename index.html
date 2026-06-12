@@ -96,6 +96,21 @@
     align-items: center;
   }
   .category-head input { font-weight: 600; }
+  .drag-handle {
+    cursor: grab;
+    color: #999;
+    font-size: 1.1rem;
+    padding: 4px 2px;
+    user-select: none;
+    flex: 0 0 auto;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .drag-over { outline: 2px dashed var(--honey); outline-offset: 2px; }
+  input.cat-hint {
+    margin-bottom: 10px;
+    font-style: italic;
+    background: #fffbe8;
+  }
   .category-head button {
     background: #fbe9e7; border: none; border-radius: 6px;
     padding: 8px 10px; cursor: pointer;
@@ -215,6 +230,13 @@
   }
   table.signup td.namecol { height: 9mm; }
   table.signup tr { page-break-inside: avoid; }
+  .sheet .cat-hint-print {
+    font-size: 10pt;
+    font-style: italic;
+    color: #333;
+    margin: 0 0 2mm 1mm;
+    page-break-after: avoid;
+  }
   .sheet .footer {
     margin-top: 8mm;
     font-size: 10pt;
@@ -307,6 +329,8 @@ const I18N = {
     uiItemsHint: "Pro Position entsteht eine Zeile mit Schreiblinie für den Namen. „Anzahl“ = wie viele Personen sich für diese Position eintragen können (jede bekommt eine eigene Zeile).",
     uiAddCat: "＋ Kategorie hinzufügen", uiAddItem: "＋ Position",
     phCategory: "Kategorie, z. B. Essen", phItem: "Position, z. B. Kuchen",
+    phHint: "Hinweis (optional), z. B. „Thermoskanne bitte gefüllt mitbringen“",
+    dragCat: "Kategorie verschieben (ziehen)", dragItem: "Position verschieben (ziehen)",
     delCat: "Kategorie löschen", delItem: "Position löschen", countTitle: "Anzahl Zeilen",
     tplChoose: "Vorlage wählen…",
     tplNames: { sommerfest: "Sommerfest", winterfest: "Winterfest", flohmarkt: "Flohmarkt", leer: "Leere Liste" },
@@ -330,6 +354,8 @@ const I18N = {
     uiItemsHint: "Each item gets a row with a line for a name. “Count” = how many people can sign up for this item (each gets their own row).",
     uiAddCat: "＋ Add category", uiAddItem: "＋ Add item",
     phCategory: "Category, e.g. Food", phItem: "Item, e.g. Cake",
+    phHint: "Hint (optional), e.g. “Please bring thermos filled”",
+    dragCat: "Move category (drag)", dragItem: "Move item (drag)",
     delCat: "Delete category", delItem: "Delete item", countTitle: "Number of rows",
     tplChoose: "Choose a template…",
     tplNames: { sommerfest: "Summer party", winterfest: "Winter party", flohmarkt: "Flea market", leer: "Empty list" },
@@ -513,17 +539,64 @@ function esc(s) {
   return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
+let drag = null;
+
+function dragCatStart(e, ci) {
+  drag = { type: 'cat', ci };
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragItemStart(e, ci, ii) {
+  drag = { type: 'item', ci, ii };
+  e.dataTransfer.effectAllowed = 'move';
+  e.stopPropagation();
+}
+function allowDrop(e, el) {
+  e.preventDefault();
+  el.classList.add('drag-over');
+}
+function clearDrop(el) { el.classList.remove('drag-over'); }
+function dropOnCat(e, ci) {
+  e.preventDefault();
+  if (drag && drag.type === 'cat' && drag.ci !== ci) {
+    const [moved] = data.categories.splice(drag.ci, 1);
+    data.categories.splice(ci, 0, moved);
+    renderEditor(); render();
+  }
+  drag = null;
+}
+function dropOnItem(e, ci, ii) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (drag && drag.type === 'item' && drag.ci === ci && drag.ii !== ii) {
+    const items = data.categories[ci].items;
+    const [moved] = items.splice(drag.ii, 1);
+    items.splice(ii, 0, moved);
+    renderEditor(); render();
+  }
+  drag = null;
+}
+
 function renderEditor() {
   const root = document.getElementById('categories');
   root.innerHTML = data.categories.map((cat, ci) => `
-    <div class="category-block">
+    <div class="category-block"
+      ondragover="allowDrop(event, this)" ondragleave="clearDrop(this)"
+      ondrop="clearDrop(this); dropOnCat(event, ${ci})">
       <div class="category-head">
+        <span class="drag-handle" draggable="true" title="${esc(t('dragCat'))}"
+          ondragstart="dragCatStart(event, ${ci})">⠿</span>
         <input type="text" value="${esc(cat.name)}" placeholder="${esc(t('phCategory'))}"
           oninput="data.categories[${ci}].name=this.value; render()">
         <button title="${esc(t('delCat'))}" onclick="removeCategory(${ci})">🗑️</button>
       </div>
+      <input type="text" class="cat-hint" value="${esc(cat.hint || '')}" placeholder="${esc(t('phHint'))}"
+        oninput="data.categories[${ci}].hint=this.value; render()">
       ${cat.items.map((it, ii) => `
-        <div class="item-row">
+        <div class="item-row"
+          ondragover="allowDrop(event, this)" ondragleave="clearDrop(this)"
+          ondrop="clearDrop(this); dropOnItem(event, ${ci}, ${ii})">
+          <span class="drag-handle" draggable="true" title="${esc(t('dragItem'))}"
+            ondragstart="dragItemStart(event, ${ci}, ${ii})">⠿</span>
           <input class="item-name" type="text" value="${esc(it.name)}" placeholder="${esc(t('phItem'))}"
             oninput="data.categories[${ci}].items[${ii}].name=this.value; render()">
           <input class="item-count" type="number" min="1" max="30" value="${it.count}" title="${esc(t('countTitle'))}"
@@ -558,6 +631,7 @@ function render() {
     const items = cat.items.filter(it => it.name.trim());
     if (!items.length && !cat.name.trim()) continue;
     if (cat.name.trim()) html += `<h2 class="cat">${esc(cat.name)}</h2>`;
+    if (cat.hint && cat.hint.trim()) html += `<div class="cat-hint-print">💡 ${esc(cat.hint)}</div>`;
     html += `<table class="signup"><tr><th style="width:32%">${esc(t('thWhat'))}</th><th style="width:30%">${esc(t('thName'))}</th><th>${esc(t('thNotes'))}</th></tr>`;
     for (const it of items) {
       for (let i = 0; i < it.count; i++) {
