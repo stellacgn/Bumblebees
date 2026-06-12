@@ -106,11 +106,24 @@
   }
   .drag-handle:active { cursor: grabbing; }
   .drag-over { outline: 2px dashed var(--honey); outline-offset: 2px; }
-  input.cat-hint {
+  .cat-hint-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
-    font-style: italic;
-    background: #fffbe8;
+    padding: 8px 10px;
+    background: #fff3c4;
+    border: 1px solid var(--honey);
+    border-radius: 6px;
   }
+  .cat-hint-wrap .bulb { font-size: 1.1rem; flex: 0 0 auto; }
+  input.cat-hint {
+    border: none;
+    background: transparent;
+    font-style: italic;
+    padding: 2px 0;
+  }
+  input.cat-hint:focus { outline: none; }
   .category-head button {
     background: #fbe9e7; border: none; border-radius: 6px;
     padding: 8px 10px; cursor: pointer;
@@ -302,6 +315,10 @@
   <div class="panel">
     <h2 id="uiItemsHead"></h2>
     <p class="hint" id="uiItemsHint"></p>
+    <label style="display:flex; align-items:center; gap:6px; margin:0 0 14px;">
+      <input type="checkbox" id="notesOn" checked onchange="render()" style="width:auto">
+      <span id="uiNotesOn"></span>
+    </label>
     <div id="categories"></div>
     <button class="btn secondary" onclick="addCategory()" id="uiAddCat"></button>
   </div>
@@ -334,7 +351,8 @@ const I18N = {
     delCat: "Kategorie löschen", delItem: "Position löschen", countTitle: "Anzahl Zeilen",
     tplChoose: "Vorlage wählen…",
     tplNames: { sommerfest: "Sommerfest", winterfest: "Winterfest", flohmarkt: "Flohmarkt", leer: "Leere Liste" },
-    thWhat: "Was / Aufgabe", thName: "Name", thNotes: "Anmerkung (z. B. Schokokuchen)",
+    thWhat: "Was / Aufgabe", thName: "Name", thNotes: "Notizen",
+    uiNotesOn: "Zusätzliche Spalte für Notizen anzeigen",
     days: ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],
     dateLocale: "de-DE",
     loadError: "Datei konnte nicht gelesen werden.",
@@ -359,7 +377,8 @@ const I18N = {
     delCat: "Delete category", delItem: "Delete item", countTitle: "Number of rows",
     tplChoose: "Choose a template…",
     tplNames: { sommerfest: "Summer party", winterfest: "Winter party", flohmarkt: "Flea market", leer: "Empty list" },
-    thWhat: "What / Task", thName: "Name", thNotes: "Details (e.g. chocolate cake)",
+    thWhat: "What / Task", thName: "Name", thNotes: "Notes",
+    uiNotesOn: "Show an additional column for notes",
     days: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
     dateLocale: "en-GB",
     loadError: "Could not read the file.",
@@ -505,6 +524,7 @@ function applyLang() {
   const ids = ["uiTitle","uiHint","uiPrint","uiSave","uiLoad","uiEventHead","uiLblTitle",
     "uiLblDate","uiLblTime","uiLblIntro","uiLblFooter","uiItemsHead","uiItemsHint","uiAddCat"];
   for (const id of ids) document.getElementById(id).textContent = t(id);
+  document.getElementById('uiNotesOn').textContent = t('uiNotesOn');
   document.getElementById('evTitle').placeholder = t('phTitle');
   document.getElementById('evTime').placeholder = t('phTime');
   document.getElementById('evIntro').placeholder = t('phIntro');
@@ -589,8 +609,11 @@ function renderEditor() {
           oninput="data.categories[${ci}].name=this.value; render()">
         <button title="${esc(t('delCat'))}" onclick="removeCategory(${ci})">🗑️</button>
       </div>
-      <input type="text" class="cat-hint" value="${esc(cat.hint || '')}" placeholder="${esc(t('phHint'))}"
-        oninput="data.categories[${ci}].hint=this.value; render()">
+      <div class="cat-hint-wrap">
+        <span class="bulb">💡</span>
+        <input type="text" class="cat-hint" value="${esc(cat.hint || '')}" placeholder="${esc(t('phHint'))}"
+          oninput="data.categories[${ci}].hint=this.value; render()">
+      </div>
       ${cat.items.map((it, ii) => `
         <div class="item-row"
           ondragover="allowDrop(event, this)" ondragleave="clearDrop(this)"
@@ -632,10 +655,11 @@ function render() {
     if (!items.length && !cat.name.trim()) continue;
     if (cat.name.trim()) html += `<h2 class="cat">${esc(cat.name)}</h2>`;
     if (cat.hint && cat.hint.trim()) html += `<div class="cat-hint-print">💡 ${esc(cat.hint)}</div>`;
-    html += `<table class="signup"><tr><th style="width:32%">${esc(t('thWhat'))}</th><th style="width:30%">${esc(t('thName'))}</th><th>${esc(t('thNotes'))}</th></tr>`;
+    const notesOn = document.getElementById('notesOn').checked;
+    html += `<table class="signup"><tr><th style="width:${notesOn ? '32%' : '45%'}">${esc(t('thWhat'))}</th><th${notesOn ? ' style="width:30%"' : ''}>${esc(t('thName'))}</th>${notesOn ? `<th>${esc(t('thNotes'))}</th>` : ''}</tr>`;
     for (const it of items) {
       for (let i = 0; i < it.count; i++) {
-        html += `<tr><td>${esc(it.name)}${it.count > 1 ? ` <span style="color:#777;font-size:9pt">(${i+1}/${it.count})</span>` : ""}</td><td class="namecol"></td><td class="namecol"></td></tr>`;
+        html += `<tr><td>${esc(it.name)}${it.count > 1 ? ` <span style="color:#777;font-size:9pt">(${i+1}/${it.count})</span>` : ""}</td><td class="namecol"></td>${notesOn ? '<td class="namecol"></td>' : ''}</tr>`;
       }
     }
     html += `</table>`;
@@ -651,6 +675,7 @@ function saveList() {
     time: document.getElementById('evTime').value,
     intro: document.getElementById('evIntro').value,
     footer: document.getElementById('evFooter').value,
+    notesOn: document.getElementById('notesOn').checked,
     categories: data.categories
   };
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
@@ -673,6 +698,7 @@ function loadList(input) {
       document.getElementById('evTime').value = obj.time || "";
       document.getElementById('evIntro').value = obj.intro || "";
       document.getElementById('evFooter').value = obj.footer || "";
+      document.getElementById('notesOn').checked = obj.notesOn !== false;
       data.categories = obj.categories || [];
       renderEditor(); render();
     } catch { alert(t('loadError')); }
