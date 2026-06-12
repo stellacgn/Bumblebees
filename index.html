@@ -310,7 +310,7 @@ const I18N = {
     delCat: "Kategorie löschen", delItem: "Position löschen", countTitle: "Anzahl Zeilen",
     tplChoose: "Vorlage wählen…",
     tplNames: { sommerfest: "Sommerfest", winterfest: "Winterfest", flohmarkt: "Flohmarkt", leer: "Leere Liste" },
-    thWhat: "Was / Aufgabe", thName: "Name",
+    thWhat: "Was / Aufgabe", thName: "Name", thNotes: "Anmerkung (z. B. Schokokuchen)",
     days: ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],
     dateLocale: "de-DE",
     loadError: "Datei konnte nicht gelesen werden.",
@@ -333,7 +333,7 @@ const I18N = {
     delCat: "Delete category", delItem: "Delete item", countTitle: "Number of rows",
     tplChoose: "Choose a template…",
     tplNames: { sommerfest: "Summer party", winterfest: "Winter party", flohmarkt: "Flea market", leer: "Empty list" },
-    thWhat: "What / Task", thName: "Name",
+    thWhat: "What / Task", thName: "Name", thNotes: "Details (e.g. chocolate cake)",
     days: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
     dateLocale: "en-GB",
     loadError: "Could not read the file.",
@@ -558,10 +558,10 @@ function render() {
     const items = cat.items.filter(it => it.name.trim());
     if (!items.length && !cat.name.trim()) continue;
     if (cat.name.trim()) html += `<h2 class="cat">${esc(cat.name)}</h2>`;
-    html += `<table class="signup"><tr><th style="width:45%">${esc(t('thWhat'))}</th><th>${esc(t('thName'))}</th></tr>`;
+    html += `<table class="signup"><tr><th style="width:32%">${esc(t('thWhat'))}</th><th style="width:30%">${esc(t('thName'))}</th><th>${esc(t('thNotes'))}</th></tr>`;
     for (const it of items) {
       for (let i = 0; i < it.count; i++) {
-        html += `<tr><td>${esc(it.name)}${it.count > 1 ? ` <span style="color:#777;font-size:9pt">(${i+1}/${it.count})</span>` : ""}</td><td class="namecol"></td></tr>`;
+        html += `<tr><td>${esc(it.name)}${it.count > 1 ? ` <span style="color:#777;font-size:9pt">(${i+1}/${it.count})</span>` : ""}</td><td class="namecol"></td><td class="namecol"></td></tr>`;
       }
     }
     html += `</table>`;
